@@ -28,9 +28,6 @@ pmd_version = "v1-spike" #current version number to print in the logger
 #logging_level = logging.INFO
 logging_level  = logging.DEBUG
 
-# extra debugging - dump histo on all frames where some threshold motion is detected (CPU INTENSIVE !)
-debug_dump_extra_motion_histo = False
-
 # define a timeout for the "event" waiting for motion to be detected,
 # so that other processing can occur when a timeout occurs, eg jpeg snapshots
 motion_event_wait_timeout = 300 # seconds
@@ -113,18 +110,10 @@ motion_frame_active = "-"
 prev_frame_annotation = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " --"
 curr_frame_annotation = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " --"
 
-# calculate trhe number of blocks that motion vectors have
+# calculate the number of blocks that motion vectors have
 # and initialize a regions of of interest array with zeroes
 motion_cols = (motion_width  + 15) // 16 + 1
 motion_rows = (motion_height + 15) // 16
-
-# pre-initialise arrays for histograms (print these in the log)
-histo_bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 40, 50, 100]
-histo0 =     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 00, 00, 00, 00, 00, 00, 000]
-histo1 =     histo0
-histo2 =     histo0
-histo_nil =  histo0
-histo_extra_debug = histo0
 
 #call back handler for motion output data from h264 hw encoder
 #this processes the motion vectors from the low resolution splitted capture
@@ -132,7 +121,6 @@ class MyMotionDetector(picamera.array.PiMotionAnalysis):
    th_counter = 0       # static variable within the class
 
    def analyse(self, a):
-      global histo1, histo2, debug_dump_extra_motion_histo, histo_extra_debug
       global camera, motion_event, motion_timestamp, motion_array, motion_array_mask
       global prev_frame_annotation, curr_frame_annotation, motion_window_active, motion_frame_active
       # calculate length of motion vectors of mpeg macro blocks
@@ -153,9 +141,6 @@ class MyMotionDetector(picamera.array.PiMotionAnalysis):
           motion_timestamp = now
           motion_frame_active = "f"
           #logger.debug('frame motion detected')
-          if debug_dump_extra_motion_histo:
-              histo_extra_debug, histo_nil = np.histogram(a, bins=histo_bins, density=False) # hopefully this resets the "bin counts" too
-              logger.debug("Histo motion frame: " + str(histo_extra_debug))
       else:
           motion_frame_active = "-"
 
@@ -170,18 +155,10 @@ class MyMotionDetector(picamera.array.PiMotionAnalysis):
       else:
           if th:
               MyMotionDetector.th_counter += 1
-              if (MyMotionDetector.th_counter == 1): # only 1      consecutive motion thresholds
-                  # create a histogram to describe the frame motion thresholds that were detected upon first detection
-                  histo1, histo_nil = np.histogram(a, bins=histo_bins, density=False) # hopefully this resets the "bin counts" too
-              elif (MyMotionDetector.th_counter == 2): # matched 2   consecutive motion thresholds
-                  # create a histogram to describe the frame motion thresholds that were detected upon second detection
-                  histo2, histo_nil = np.histogram(a, bins=histo_bins, density=False) # hopefully this resets the "bin counts" too
+              if (MyMotionDetector.th_counter == 2): # matched 2   consecutive motion thresholds
                   motion_event.set()
                   motion_window_active = "w"
                   logger.debug('Second consecutive frame motion detected - capture time window set.')
-              elif (MyMotionDetector.th_counter > 2): # more than 2 consecutive motion thresholds
-                  histo1 = histo0
-                  histo2 = histo0
           else:
               # decrement threshold counter when a non-motion detection frame occurs
               #if(MyMotionDetector.th_counter):
@@ -258,9 +235,7 @@ logger.info("motion_event_wait_timeout: %s" % (motion_event_wait_timeout))
 logger.info("perform_snapshot_capture: %r" % (perform_snapshot_capture))
 logger.info("snapshot_capture_filename: %s" % (snapshot_capture_filename))
 logger.info("logger_filename: %s" % (logger_filename))
-logger.info("Histo_frame motion threshold bins: " + str(histo_bins))
 logger.info("Logging Level: %d (info=%d, debug=%d)" % (logging_level, logging.INFO, logging.DEBUG))
-logger.info("Dump extra motion histo info: %r" % (debug_dump_extra_motion_histo))
 
 with picamera.PiCamera() as camera:
    camera.resolution = (video_width, video_height)
@@ -293,11 +268,7 @@ with picamera.PiCamera() as camera:
           logger.debug("(also, window capture status was reset prior to waiting for motion event)")
 
           if motion_event.wait(motion_event_wait_timeout):
-             histo1_tmp = histo1
-             histo2_tmp = histo2
              logger.info('Detected motion')
-             logger.info("Histo frame 1: " + str(histo1_tmp))
-             logger.info("Histo frame 2: " + str(histo2_tmp))
              motion_filename = filepath + "/" + time.strftime("%Y%m%d-%H%M%S", time.localtime(motion_timestamp))
              # split  the high res video stream to a file instead of to the internal circular buffer
              logger.debug('splitting video from circular IO buffer to after-motion-detected h264 file ')
