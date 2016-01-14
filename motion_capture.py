@@ -1,6 +1,7 @@
 #!/usr/bin/env python3 
 
 import numpy as np
+import os
 import picamera
 import picamera.array
 import datetime
@@ -52,6 +53,10 @@ class DetectMotion(picamera.array.PiMotionAnalysis):
 
 
 if __name__ == '__main__':
+    dir = '/dev/shm/motion_capture'
+    if not os.path.isdir(dir):
+        os.mkdir(dir)
+    
     wait_interval = 0.1 # how long to wait between checking for motion
     still_interval = 0.5 # min seconds between still frames
     framerate = 15
@@ -83,7 +88,7 @@ if __name__ == '__main__':
                 if (output.last_recordable is not None
                     and time.time() - last_still >= still_interval):
                     time_now = datetime.datetime.now()
-                    filename = 'picam-%s.jpg' % time_now.strftime('%FT%H-%M-%S.%f')
+                    filename = '%s/picam-%s.jpg' % (dir, time_now.strftime('%FT%H-%M-%S.%f'))
                     camera.capture(filename, use_video_port=True, quality = quality)
                     last_still = time.time()
             camera.stop_recording()
