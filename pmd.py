@@ -39,8 +39,8 @@ if not os.path.exists(filepath):
 logger_filename = filepath + '/pmd.log'
 
 # setup pre and post video recording around motion events
-video_preseconds = 2   # minimum 1
-video_postseconds = 2  # minimum 1
+video_preseconds = 1   # minimum 1
+video_postseconds = 3  # minimum 1
 
 # setup the main video/snapshot camera resolution
 # see this link for a full discussion on how to choose a valid resolution that will work
@@ -173,8 +173,7 @@ class MyMotionDetector(picamera.array.PiMotionAnalysis):
           prev_frame_annotation = curr_frame_annotation
 
 # Write the entire content of the circular buffer to disk. No need to
-# lock the stream here as we're definitely not writing to it
-# simultaneously
+# lock the stream here as we're definitely not writing to it simultaneously
 def write_video(stream):
      global motion_filename
 
@@ -236,6 +235,8 @@ logger.info("perform_snapshot_capture: %r" % (perform_snapshot_capture))
 logger.info("snapshot_capture_filename: %s" % (snapshot_capture_filename))
 logger.info("logger_filename: %s" % (logger_filename))
 logger.info("Logging Level: %d (info=%d, debug=%d)" % (logging_level, logging.INFO, logging.DEBUG))
+
+# TODO: write thread that prints a debug message saying that motion has been detected, once every half-second or so
 
 with picamera.PiCamera() as camera:
    camera.resolution = (video_width, video_height)
