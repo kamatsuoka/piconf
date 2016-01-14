@@ -20,7 +20,7 @@ if __name__ == '__main__':
             cmd = '/usr/bin/convert -strip -interlace Plane -gaussian-blur 0.05 -quality 85%% %s converted/%s' % (f, f)
             returncode = subprocess.call(cmd.split(' '), timeout=5)
             if returncode == 0:
-                os.remote(f)
+                os.remove(f)
         time.sleep(1)
                 
         
