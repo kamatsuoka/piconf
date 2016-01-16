@@ -1,21 +1,28 @@
 #!/usr/bin/env python3 
 
-import numpy as np
+import datetime
 import os
+import time
+
+import numpy as np
 import picamera
 import picamera.array
-import datetime
-import time
 
 class DetectMotion(picamera.array.PiMotionAnalysis):
 
-    def __init__(self, camera, motion_threshold, min_blocks, still_interval, size = None):
+    def __init__(self, camera, motion_threshold, min_blocks, min_consecutive, still_interval, size = None):
         self.start_time = time.time()
+        self.motion_threshold = motion_threshold
+        self.min_blocks = min_blocks
+        self.min_consecutive = min_consecutive
+        self.still_interval = still_interval
+
         self.last_motion = None
         self.last_recordable = None
         self.warmed_up = False
-        self.still_interval = still_interval
         self.preview_running = False
+        self.consecutive_motions = 0
+
         super().__init__(camera, size)
 
     def analyse(self, a):
@@ -26,7 +33,7 @@ class DetectMotion(picamera.array.PiMotionAnalysis):
             ).clip(0, 255).astype(np.uint8)
             # If there're more than 10 vectors with a magnitude greater
             # than 60, then say we've detected motion
-            moving = (a > motion_threshold).sum()
+            moving = (a > self.motion_threshold).sum()
             t = time.time()
 
             # Turn on the display at the slightest sign of motion,
@@ -40,10 +47,14 @@ class DetectMotion(picamera.array.PiMotionAnalysis):
                 camera.stop_preview()
                 self.preview_running = False
 
-            # If at least min_blocks are moving, signal that we can start recording.
-            if moving > min_blocks:
-                self.last_recordable = t
+            # If at least min_blocks are moving for at least min_consecutive frames in a row,
+            # signal that we can start recording.
+            if moving > self.min_blocks:
+                self.consecutive_motions += 1
+                if (self.consecutive_motions >= self.min_consecutive):
+                    self.last_recordable = t
             else:
+                self.consecutive_motions = 0
                 if (self.last_recordable is not None and
                     t - self.last_recordable > 2 * self.still_interval):
                     self.last_recordable = None
@@ -66,6 +77,7 @@ if __name__ == '__main__':
     motion_height = 243
     motion_threshold = 7
     min_blocks = 4
+    min_consecutive = 2
     quality = 85
     iso = 800
     hflip = True
@@ -79,7 +91,7 @@ if __name__ == '__main__':
         camera.hflip = hflip
         camera.vflip = vflip
         camera.iso = iso
-        with DetectMotion(camera, motion_threshold, min_blocks, still_interval,
+        with DetectMotion(camera, motion_threshold, min_blocks, min_consecutive, still_interval,
                           size=(motion_width, motion_height)) as output:
             camera.start_recording('/dev/null', resize=(motion_width, motion_height),
                                    format='h264', motion_output=output)
