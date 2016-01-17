@@ -8,15 +8,10 @@
 
 from glob import glob
 import os, subprocess, time
-from multiprocessing import Pool, Process
-import signal
 import sys
 import time
 
 # continually looks for files in captured_dir and converts them to a smaller size.
-
-def init_worker():
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def compress(filename):
     """ compresses a jpg to a smaller file in the 'converted' dir and deletes the original """
@@ -31,22 +26,16 @@ if __name__ == '__main__':
     base_dir = sys.argv[1] if len(sys.argv) > 1 else '/dev/shm/motion_capture'
     captured_dir = '%s/captured' % base_dir
     converted_dir = '%s/converted' % base_dir
-    for dir in [ base_dir, captured_dir, converted_dir ]:
+    upload_dir = '%s/upload' % base_dir
+    for dir in [ base_dir, captured_dir, converted_dir, upload_dir ]:
         if not os.path.isdir(dir):
             os.mkdir(dir)
 
-    pool = Pool(processes=4, initializer=init_worker)
-
     try:
         while True:
-            pool.map(compress, glob('%s/*.jpg' % captured_dir), 1)
+            for filename in glob('%s/*.jpg' % captured_dir):
+                compress(filename)
             time.sleep(1)
     except KeyboardInterrupt:
         print('Interrupted')
-        pool.terminate()
-        pool.join()
-    else:
-        print('Exiting')
-        pool.close()
-        pool.join()
     
