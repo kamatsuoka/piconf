@@ -13,4 +13,8 @@ sudo apt-get install sshfs
 sudo apt-get install lsof
 sudo apt-get install libopencv-dev python-opencv
 
+# set up daemons 
+sudo cp -R system/* /
+sudo systemctl daemon-reload && sudo systemctl enable motion_detect.service
+
 
