@@ -10,12 +10,14 @@ import picamera.array
 
 class DetectMotion(picamera.array.PiMotionAnalysis):
 
-    def __init__(self, camera, motion_threshold, min_blocks, min_consecutive, still_interval, size = None):
+    def __init__(self, camera, motion_threshold, min_blocks, min_consecutive, 
+		 still_interval, preview_timeout, size = None):
         self.start_time = time.time()
         self.motion_threshold = motion_threshold
         self.min_blocks = min_blocks
         self.min_consecutive = min_consecutive
         self.still_interval = still_interval
+        self.preview_timeout = preview_timeout
 
         self.last_motion = None
         self.last_recordable = None
@@ -37,13 +39,14 @@ class DetectMotion(picamera.array.PiMotionAnalysis):
             t = time.time()
 
             # Turn on the display at the slightest sign of motion,
-            # then turn it off after 7 seconds of no motion
+            # then turn it off after some seconds of no motion
             if moving > 1:
                 self.last_motion = t
                 if not self.preview_running:
                     camera.start_preview()
                     self.preview_running = True
-            elif self.preview_running and self.last_motion is not None and t - self.last_motion > 7:
+            elif self.preview_running and \
+                 self.last_motion is not None and t - self.last_motion > self.preview_timeout:
                 camera.stop_preview()
                 self.preview_running = False
 
@@ -81,6 +84,7 @@ if __name__ == '__main__':
     motion_threshold = 7
     min_blocks = 4
     min_consecutive = 2
+    preview_timeout = 5
     iso = 800
     hflip = True
     vflip = False
@@ -94,10 +98,8 @@ if __name__ == '__main__':
         camera.vflip = vflip
         camera.iso = iso
 
-        camera.start_preview()
-        
         with DetectMotion(camera, motion_threshold, min_blocks, min_consecutive, still_interval,
-                          size=(motion_width, motion_height)) as output:
+                          preview_timeout, size=(motion_width, motion_height)) as output:
             camera.start_recording('/dev/null', resize=(motion_width, motion_height),
                                    format='h264', motion_output=output)
             while True:
