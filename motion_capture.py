@@ -1,7 +1,6 @@
 #!/usr/bin/env python3 
 
 import datetime
-from multiprocessing import Pool, Process
 import os
 import time
 
@@ -63,33 +62,15 @@ class DetectMotion(picamera.array.PiMotionAnalysis):
             # Warmup time needed to prevent spurious recording at start
             self.warmed_up = time.time() - self.start_time > 2
 
-def compress(filename):
-    """ compresses a jpg to a smaller file in the 'converted' dir and deletes the original """
-    convert_opts = '-strip -interlace Plane -gaussian-blur 0.05 -quality 85%'
-    converted_filename = filename.replace('/captured/', '/converted/')
-    cmd = '/usr/bin/convert %s %s converted/%s' % (convert_opts, filename, converted_filename)
-    returncode = subprocess.call(cmd.split(' '), timeout=5)
-    if returncode == 0:
-        os.remove(filename)
-
-def convert_captured(captured_dir): 
-    with Pool(processes=4) as pool:
-        while True:
-            pool.map(compress, glob('%s/*.jpg') % captured_dir, 1)
-            time.sleep(1)
-
+            
 if __name__ == '__main__':
     base_dir = '/dev/shm/motion_capture'
-    writing_dir = '%/writing' % base_dir
-    captured_dir =  '%/captured' % base_dir
-    converted_dir =  '%/converted' % base_dir
-    for dir in [ base_dir, writing_dir, captured_dir, converted_dir ]:
+    writing_dir = '%s/writing' % base_dir
+    captured_dir =  '%s/captured' % base_dir
+    for dir in [ base_dir, writing_dir, captured_dir ]:
         if not os.path.isdir(dir):
             os.mkdir(dir)
 
-    p = Process(target=convert_captured, args=(captured_dir), name='convert_captured')
-    p.start()
-    
     wait_interval = 0.1 # how long to wait between checking for motion
     still_interval = 0.5 # min seconds between still frames
     framerate = 15
@@ -100,7 +81,6 @@ if __name__ == '__main__':
     motion_threshold = 7
     min_blocks = 4
     min_consecutive = 2
-    quality = 85
     iso = 800
     hflip = True
     vflip = False
@@ -113,6 +93,9 @@ if __name__ == '__main__':
         camera.hflip = hflip
         camera.vflip = vflip
         camera.iso = iso
+
+        camera.start_preview()
+        
         with DetectMotion(camera, motion_threshold, min_blocks, min_consecutive, still_interval,
                           size=(motion_width, motion_height)) as output:
             camera.start_recording('/dev/null', resize=(motion_width, motion_height),
@@ -124,8 +107,7 @@ if __name__ == '__main__':
                     time_now = datetime.datetime.now()
                     filename = 'picam-%s.jpg' % time_now.strftime('%FT%H-%M-%S.%f')
                     # capture to the 'writing' directory
-                    camera.capture('%s/%s' % (writing_dir, filename), use_video_port=True, quality = quality)
+                    camera.capture('%s/%s' % (writing_dir, filename), use_video_port=True)
                     # move to the 'captured' directory atomically
                     os.rename('%s/%s' % (writing_dir, filename), '%s/%s' % (captured_dir, filename))
                     last_still = time.time()
-            camera.stop_recording()
