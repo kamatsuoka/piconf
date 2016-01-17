@@ -10,12 +10,20 @@ import os, subprocess, time
 import sys
 import time
 
+# TODO: logging
+
+from concurrent.futures import ThreadPoolExecutor
+
 def upload(filename):
     """ uploads a jpg, then deletes it """
-    cmd = 'acd_cli upload %s Pictures/picam' % filename
-    returncode = subprocess.call(cmd.split(' '), timeout=20)
-    if returncode == 0:
-        os.remove(filename)
+    try:
+        cmd = 'acd_cli upload %s Pictures/picam' % filename
+        returncode = subprocess.call(cmd.split(' '), timeout=20)
+        if returncode == 0:
+            print('removing %s' % filename)
+            os.remove(filename)
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
 
 if __name__ == '__main__':
     base_dir = sys.argv[1] if len(sys.argv) > 1 else '/dev/shm/motion_capture'
@@ -24,11 +32,9 @@ if __name__ == '__main__':
         if not os.path.isdir(dir):
             os.mkdir(dir)
 
-    try:
-        while True:
-            for filename in glob('%s/*.jpg' % upload_dir):
-                upload(filename)
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print('Interrupted')
+    while True:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            executor.map(upload, glob('%s/*.jpg' % upload_dir), timeout=60)
+        time.sleep(1)
+
     
