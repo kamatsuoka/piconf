@@ -1,0 +1,10 @@
+[Unit]
+Description=compress images captured by motion capture
+
+[Service]
+Type=idle
+ExecStart=/opt/motion_capture/bin/compress.py >> /dev/shm/motion_capture/compress.log 2>&1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
