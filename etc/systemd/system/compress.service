@@ -3,7 +3,7 @@ Description=compress images captured by motion capture
 
 [Service]
 Type=idle
-ExecStart=/opt/motion_capture/bin/compress.py >> /dev/shm/motion_capture/compress.log 2>&1
+ExecStart=/opt/motion_capture/bin/compress.py
 Restart=on-failure
 
 [Install]

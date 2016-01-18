@@ -3,7 +3,7 @@ Description=Detects motion and captures still images
 
 [Service]
 Type=idle
-ExecStart=/home/pi/git/piconf/motion_capture.py >> /dev/shm/motion_capture/motion_capture.log 2>&1
+ExecStart=/opt/motion_capture/bin/motion_capture.py
 Restart=on-failure
 
 [Install]

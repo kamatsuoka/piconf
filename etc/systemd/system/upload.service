@@ -3,7 +3,7 @@ Description=upload images captured by motion capture
 
 [Service]
 Type=idle
-ExecStart=/opt/motion_capture/bin/upload.py >> /dev/shm/motion_capture/upload.log 2>&1
+ExecStart=/opt/motion_capture/bin/upload.py
 Restart=on-failure
 
 [Install]
