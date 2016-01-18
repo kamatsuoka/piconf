@@ -6,7 +6,7 @@ services=(motion_capture compress upload)
 
 case "$1" in
 start|stop|restart|status)
-  action = $1
+  action=$1
   ;;
 *)
   echo "Usage: $0 start|stop|restart|status" > /dev/stderr
