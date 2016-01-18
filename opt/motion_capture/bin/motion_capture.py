@@ -2,6 +2,7 @@
 
 import datetime
 import os
+import subprocess
 import time
 
 import numpy as np
@@ -73,6 +74,10 @@ if __name__ == '__main__':
     for dir in [ base_dir, writing_dir, captured_dir ]:
         if not os.path.isdir(dir):
             os.mkdir(dir)
+   
+    # put the screen to sleep
+    os.environ['DISPLAY'] = ':0'
+    subprocess.call('xset dpms force off'.split(' '))
 
     wait_interval = 0.1 # how long to wait between checking for motion
     still_interval = 0.5 # min seconds between still frames
