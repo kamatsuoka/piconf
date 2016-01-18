@@ -19,7 +19,8 @@ def upload(dir):
     try:
         acd_opts = '--force --remove-source-files --max-connections=8'
         cmd = 'acd_cli upload %s %s Pictures/picam' % (acd_opts, dir)
-        return subprocess.call(cmd.split(' '), timeout=60)
+        # discarding stdout to avoid cluttering syslog with progress bar updates
+        return subprocess.call(cmd.split(' '), stdout=subprocess.DEVNULL, timeout=60)
     except:
         print("Unexpected error: %s " % traceback.format_exc())
 
@@ -40,7 +41,6 @@ if __name__ == '__main__':
                         shutil.rmtree(dir)
             except:
                 print("Unexpected error: %s " % traceback.format_exc())
-#                print('Unable to process directory %s under %s' % (dir, upload_dir))
         time.sleep(1)
 
     
